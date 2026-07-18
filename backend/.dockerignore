@@ -1,0 +1,11 @@
+.git
+.env
+vendor
+node_modules
+bootstrap/cache/*.php
+!bootstrap/cache/.gitignore
+storage/*.key
+storage/app/private/projects/*
+storage/logs/*
+db.sqlite
+database/database.sqlite

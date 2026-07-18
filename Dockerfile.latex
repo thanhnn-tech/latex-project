@@ -1,0 +1,5 @@
+FROM kjarosh/latex:2025.2-basic
+
+# Install Beamer, PGF (TikZ), and other dependencies needed for compilation
+RUN tlmgr update --self && \
+    tlmgr install latexmk beamer pgf translator etoolbox sansmathaccent koma-script amsfonts
