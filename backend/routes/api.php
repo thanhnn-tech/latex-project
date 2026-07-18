@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\CompileController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectFileController;
 use App\Http\Controllers\Api\ProjectFileVersionController;
 use App\Http\Controllers\Api\SyncTexController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('health', [HealthController::class, 'check']);
 
 Route::apiResource('projects', ProjectController::class)->parameters(['projects' => 'project']);
 Route::get('projects/{project}/download', [ProjectController::class, 'download']);
