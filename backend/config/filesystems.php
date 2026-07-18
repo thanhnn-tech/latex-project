@@ -32,13 +32,6 @@ return [
 
         'local' => [
             'driver' => 'local',
-            // In Docker, CompileService/SyncTexService pass this disk's absolute path to
-            // `docker run -v <path>:/data` — but that bind-mount source is resolved by the
-            // HOST's dockerd (reached via the mounted docker.sock), not by this container's
-            // filesystem. So in production this must be overridden to a path that is bind-
-            // mounted at the SAME location on both the host and this container (see
-            // DEPLOY.md) — otherwise the sibling compile container mounts the wrong (or a
-            // nonexistent) directory.
             'root' => env('LOCAL_STORAGE_ROOT', storage_path('app/private')),
             'serve' => true,
             'throw' => false,

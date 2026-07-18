@@ -1,13 +1,8 @@
-version: '3.8'
-
 services:
   # Laravel backend application (PHP-FPM)
   backend-app:
     build:
       context: ./backend
-    # We use path-alignment: container workdir matches host absolute path.
-    # This allows Docker-out-of-Docker sibling containers to resolve volume mounts.
-    working_dir: ${PWD}/backend
     environment:
       - APP_ENV=production
       - APP_DEBUG=true # Set to false in real production
@@ -19,12 +14,8 @@ services:
       - DB_USERNAME=latex_user
       - DB_PASSWORD=latex_password
       - QUEUE_CONNECTION=database
-      # Override the local storage root so that paths sent to host dockerd match
-      - LOCAL_STORAGE_ROOT=${PWD}/backend/storage/app/private
-      - LATEX_COMPILER_IMAGE=my-latex:basic
     volumes:
-      - ./backend:${PWD}/backend
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend:/var/web
     depends_on:
       - db
 
@@ -32,7 +23,6 @@ services:
   backend-worker:
     build:
       context: ./backend
-    working_dir: ${PWD}/backend
     command: php artisan queue:work --verbose --tries=3 --timeout=0
     environment:
       - APP_ENV=production
@@ -45,11 +35,8 @@ services:
       - DB_USERNAME=latex_user
       - DB_PASSWORD=latex_password
       - QUEUE_CONNECTION=database
-      - LOCAL_STORAGE_ROOT=${PWD}/backend/storage/app/private
-      - LATEX_COMPILER_IMAGE=my-latex:basic
     volumes:
-      - ./backend:${PWD}/backend
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend:/var/web
     depends_on:
       - backend-app
 
@@ -59,11 +46,11 @@ services:
     ports:
       - "8000:80"
     environment:
-      - BACKEND_ROOT=${PWD}/backend
+      - BACKEND_ROOT=/var/web
       - BACKEND_HOST=backend-app
     volumes:
       - ./backend/docker/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ./backend:${PWD}/backend:ro
+      - ./backend:/var/web:ro
     depends_on:
       - backend-app
 

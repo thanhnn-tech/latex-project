@@ -3,14 +3,11 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 class SyncTexService
 {
-    private const IMAGE = 'texlive/texlive:latest';
-
     private const TIMEOUT_SECONDS = 10;
 
     public function __construct(
@@ -62,7 +59,8 @@ class SyncTexService
             return null;
         }
 
-        $file = ltrim(str_replace('/data/', '', $fields['Input']), './');
+        $filesDir = $this->storage->absoluteFilesPath($project);
+        $file = ltrim(str_replace($filesDir.'/', '', $fields['Input']), './');
 
         return [
             'file' => $file,
@@ -76,32 +74,15 @@ class SyncTexService
      */
     private function run(Project $project, array $command): string
     {
-        $containerName = 'synctex-'.Str::uuid();
         $filesDir = $this->storage->absoluteFilesPath($project);
 
-        $process = new Process([
-            'docker', 'run', '--rm',
-            '--name', $containerName,
-            '--network', 'none',
-            '--cpus', '1',
-            '--memory', '256m',
-            '--memory-swap', '256m',
-            '--pids-limit', '64',
-            '--read-only',
-            '--tmpfs', '/tmp',
-            '-v', "{$filesDir}:/data:ro",
-            '-w', '/data',
-            env('LATEX_COMPILER_IMAGE', 'texlive/texlive:latest'),
-            ...$command,
-        ]);
+        $process = new Process($command, $filesDir);
         $process->setTimeout(self::TIMEOUT_SECONDS);
 
         try {
             $process->run();
         } catch (ProcessTimedOutException) {
-            // fall through with whatever output was captured before the timeout
-        } finally {
-            (new Process(['docker', 'rm', '-f', $containerName]))->run();
+            $process->stop();
         }
 
         return $process->getOutput();

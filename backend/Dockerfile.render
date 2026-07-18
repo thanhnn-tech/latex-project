@@ -1,8 +1,9 @@
 FROM php:8.4-fpm-bookworm
 
-# Install system dependencies + TeX Live (compiles LaTeX in-container, no sibling
-# docker container needed). Package set mirrors what Dockerfile.latex used to
-# install via tlmgr: latexmk, beamer, pgf/tikz, translator, etoolbox, koma-script, amsfonts.
+# Single-container image for Render: nginx + php-fpm + TeX Live, run via supervisord.
+# Render doesn't allow two services to share a filesystem, and nginx needs direct
+# access to public/ and the php-fpm socket, so they can't be split into separate
+# services the way local docker-compose does it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -13,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libsqlite3-dev \
     libpq-dev \
-    postgresql-client \
     latexmk \
     texlive-latex-base \
     texlive-latex-recommended \
@@ -21,7 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-pictures \
-    && rm -rf /var/lib/apt/lists/*
+    nginx \
+    supervisor \
+    gettext-base \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/nginx/sites-enabled/default
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql pdo_sqlite xml zip bcmath gd
@@ -29,7 +33,6 @@ RUN docker-php-ext-install pdo pdo_pgsql pdo_sqlite xml zip bcmath gd
 # Copy Composer from the official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/web
 
 # Copy dependency configuration
@@ -44,12 +47,14 @@ COPY . .
 # Generate autoload files
 RUN composer dump-autoload --no-dev --optimize
 
-# Copy entrypoint script and make it executable
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# nginx + supervisord + entrypoint
+COPY docker/nginx.render.conf.template /etc/nginx/nginx.conf.template
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
+RUN chmod +x /usr/local/bin/render-entrypoint.sh
 
 # Set correct ownership for Laravel folders
 RUN chown -R www-data:www-data /var/web
 
-ENTRYPOINT ["entrypoint.sh"]
-CMD ["php-fpm"]
+ENTRYPOINT ["render-entrypoint.sh"]
+CMD ["supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

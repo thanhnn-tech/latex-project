@@ -3,14 +3,11 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 class CompileService
 {
-    private const IMAGE = 'texlive/texlive:latest';
-
     private const TIMEOUT_SECONDS = 45;
 
     public function __construct(
@@ -25,28 +22,15 @@ class CompileService
     {
         $project->update(['compile_status' => 'compiling']);
 
-        $containerName = 'compile-'.Str::uuid();
         $filesDir = $this->storage->absoluteFilesPath($project);
 
         $process = new Process([
-            'docker', 'run', '--rm',
-            '--name', $containerName,
-            '--network', 'none',
-            '--cpus', '1',
-            '--memory', '512m',
-            '--memory-swap', '512m',
-            '--pids-limit', '128',
-            '--read-only',
-            '--tmpfs', '/tmp',
-            '-v', "{$filesDir}:/data",
-            '-w', '/data',
-            env('LATEX_COMPILER_IMAGE', 'texlive/texlive:latest'),
             // -gg: force a fresh rebuild every run. Without it, latexmk's .fdb_latexmk
             // cache can report "Nothing to do" on the run after a halted/failed compile,
             // masking the fact that no PDF was produced.
             'latexmk', '-pdf', '-gg', '-synctex=1', '-interaction=nonstopmode', '-halt-on-error',
             '-no-shell-escape', '-jobname=main', $project->main_file,
-        ]);
+        ], $filesDir);
         $process->setTimeout(self::TIMEOUT_SECONDS);
 
         $startedAt = microtime(true);
@@ -56,8 +40,7 @@ class CompileService
             $process->run();
         } catch (ProcessTimedOutException) {
             $timedOut = true;
-        } finally {
-            (new Process(['docker', 'rm', '-f', $containerName]))->run();
+            $process->stop();
         }
 
         $durationMs = (int) ((microtime(true) - $startedAt) * 1000);

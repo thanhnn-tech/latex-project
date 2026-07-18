@@ -1,0 +1,110 @@
+databases:
+  - name: latex-db
+    plan: basic-1gb
+    region: oregon
+    postgresMajorVersion: "16"
+
+services:
+  # Public web service: nginx + php-fpm + TeX Live in one container.
+  - type: web
+    name: backend-web
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: ./backend
+    region: oregon
+    plan: standard
+    healthCheckPath: /up
+    preDeployCommand: php artisan migrate --force
+    disk:
+      name: backend-storage
+      mountPath: /var/web/storage/app/private
+      sizeGB: 5
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        fromService:
+          name: backend-web
+          type: web
+          property: hostport
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: latex-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: latex-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: latex-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: latex-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: latex-db
+          property: password
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr
+
+  # Private worker: processes queued jobs. Doesn't touch project files, so it
+  # doesn't need the disk that backend-web has.
+  - type: worker
+    name: backend-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: php artisan queue:work --verbose --tries=3 --timeout=0
+    region: oregon
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        fromService:
+          name: backend-web
+          type: web
+          envVarKey: APP_KEY
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: latex-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: latex-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: latex-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: latex-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: latex-db
+          property: password
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr

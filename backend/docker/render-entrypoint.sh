@@ -11,11 +11,8 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
 fi
 
-# If vendor directory is missing in the mounted host volume, restore it from the built image
-if [ ! -d "vendor" ] && [ -d "/var/web/vendor" ]; then
-    echo "Local vendor directory not found. Restoring from Docker image..."
-    cp -r /var/web/vendor vendor
-fi
+# Render sets PORT dynamically; bake it into the nginx server block
+envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf
 
 # Execute the main container command
 exec "$@"
