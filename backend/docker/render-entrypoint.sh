@@ -11,8 +11,12 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
 fi
 
-# Render sets PORT dynamically; bake it into the nginx server block
+# Render sets PORT dynamically; bake it into the nginx server block. Fall back
+# to the image default if it's somehow unset/empty, since an empty ${PORT}
+# produces an invalid "listen ;" directive that crash-loops nginx.
+: "${PORT:=10000}"
 envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf
+nginx -t
 
 # Execute the main container command
 exec "$@"

@@ -1,5 +1,11 @@
 FROM php:8.4-fpm-bookworm
 
+# Render's documented default port for web services. Render overrides this at
+# runtime with its own PORT env var; this is only a fallback so nginx never
+# gets an empty ${PORT} substitution (which crash-loops nginx with an
+# "invalid number of arguments in listen directive" error).
+ENV PORT=10000
+
 # Single-container image for Render: nginx + php-fpm + TeX Live, run via supervisord.
 # Render doesn't allow two services to share a filesystem, and nginx needs direct
 # access to public/ and the php-fpm socket, so they can't be split into separate
