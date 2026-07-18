@@ -12,9 +12,12 @@ services:
       - APP_ENV=production
       - APP_DEBUG=true # Set to false in real production
       - APP_URL=http://localhost:8000
-      - DB_CONNECTION=sqlite
-      # If using sqlite, we store it in the database directory:
-      - DB_DATABASE=${PWD}/backend/database/database.sqlite
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=latex
+      - DB_USERNAME=latex_user
+      - DB_PASSWORD=latex_password
       - QUEUE_CONNECTION=database
       # Override the local storage root so that paths sent to host dockerd match
       - LOCAL_STORAGE_ROOT=${PWD}/backend/storage/app/private
@@ -35,8 +38,12 @@ services:
       - APP_ENV=production
       - APP_DEBUG=true
       - APP_URL=http://localhost:8000
-      - DB_CONNECTION=sqlite
-      - DB_DATABASE=${PWD}/backend/database/database.sqlite
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=latex
+      - DB_USERNAME=latex_user
+      - DB_PASSWORD=latex_password
       - QUEUE_CONNECTION=database
       - LOCAL_STORAGE_ROOT=${PWD}/backend/storage/app/private
       - LATEX_COMPILER_IMAGE=my-latex:basic
@@ -60,19 +67,18 @@ services:
     depends_on:
       - backend-app
 
-  # MySQL database (optional if using SQLite)
+  # PostgreSQL database
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     restart: always
     environment:
-      MYSQL_DATABASE: latex
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_USER: latex_user
-      MYSQL_PASSWORD: latex_password
+      POSTGRES_DB: latex
+      POSTGRES_USER: latex_user
+      POSTGRES_PASSWORD: latex_password
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - db-data:/var/lib/mysql
+      - db-data:/var/lib/postgresql/data
 
 volumes:
   db-data:

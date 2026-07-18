@@ -38,7 +38,7 @@ Khi khởi động xong, API backend sẽ chạy tại địa chỉ: **`http://l
    - `backend-app`: Chạy Laravel PHP-FPM.
    - `backend-worker`: Chạy queue worker xử lý các tác vụ nền.
    - `backend-nginx`: Web server Nginx định tuyến các request đến PHP-FPM (Chạy ở port `8000`).
-   - `db`: Database MySQL (được cấu hình sẵn, có thể chuyển sang dùng thay SQLite).
+   - `db`: Database PostgreSQL (được cấu hình sẵn làm database mặc định).
 2. **`backend/Dockerfile`**: Build PHP 8.3 container cài sẵn các extension cần thiết (PDO, Zip, GD,...) và cài thêm `docker-cli` để Laravel có thể ra lệnh compile.
 3. **`backend/docker/entrypoint.sh`**: File entrypoint tự động phân quyền truy cập `/var/run/docker.sock` cho user `www-data` bên trong container.
 4. **`backend/docker/nginx.conf.template`**: Cấu hình Nginx linh hoạt dùng các biến môi trường để trỏ đúng thư mục public của Laravel.
@@ -62,21 +62,18 @@ docker run --rm -v <đường_dẫn_dự_án>:/data kjarosh/latex:medium ...
 
 ---
 
-## 🗄️ Sử dụng Database MySQL thay vì SQLite
+## 🗄️ Database PostgreSQL
 
-Nếu bạn muốn chuyển sang sử dụng database MySQL (được định nghĩa trong service `db` của `docker-compose.yml`):
-
-1. Mở file `.env` của backend (`backend/.env`).
-2. Sửa các biến môi trường cấu hình database như sau:
+Database mặc định của dự án là PostgreSQL (được định nghĩa trong service `db` của `docker-compose.yml`). Cấu hình `.env` của backend (`backend/.env`) đã được thiết lập sẵn như sau:
    ```env
-   DB_CONNECTION=mysql
+   DB_CONNECTION=pgsql
    DB_HOST=db
-   DB_PORT=3306
+   DB_PORT=5432
    DB_DATABASE=latex
    DB_USERNAME=latex_user
    DB_PASSWORD=latex_password
    ```
-3. Khởi động lại docker-compose:
+Nếu bạn vừa đổi cấu hình này, khởi động lại docker-compose:
    ```bash
    docker compose down
    docker compose up -d

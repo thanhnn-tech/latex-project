@@ -10,11 +10,12 @@ RUN apk add --no-cache \
     unzip \
     libzip-dev \
     sqlite-dev \
-    mysql-client \
+    postgresql-dev \
+    postgresql-client \
     docker-cli
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql pdo_sqlite xml zip bcmath gd
+RUN docker-php-ext-install pdo pdo_pgsql pdo_sqlite xml zip bcmath gd
 
 # Copy Composer from the official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
